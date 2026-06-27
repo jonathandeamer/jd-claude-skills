@@ -4,21 +4,34 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-This is a **Claude Code plugin marketplace**, not a Python application. Despite the name, there is no Python code to build or run here. The deliverable is a *skill* — a Markdown instruction file that teaches Claude how to scaffold new Python projects. Editing this repo means editing prose (instructions Claude follows), not application logic.
+This repo (`jd-claude-skills`) is **Jonathan Deamer's personal Claude Code plugin marketplace** — a catalog of skills, not a Python application. There is no application code to build or run here. Each deliverable is a *skill*: a Markdown instruction file that teaches Claude to do something. Editing this repo means editing prose (instructions Claude follows) and the manifests that package it, not application logic. The marketplace currently ships one skill (`bootstrap-python-repo`) but is structured to hold many.
 
 ## Layout
 
-Three nested manifests, each a layer of the plugin system:
+One marketplace catalog at the root, then one self-contained plugin per skill:
 
-- `.claude-plugin/marketplace.json` — the marketplace catalog. Lists plugins and points `source` at each plugin directory.
-- `plugins/bootstrap-python-repo/.claude-plugin/plugin.json` — the plugin manifest (name, description, author, and — when published — `version`).
-- `plugins/bootstrap-python-repo/skills/bootstrap-python-repo/SKILL.md` — **the actual product.** Everything else is packaging around this one file.
+- `.claude-plugin/marketplace.json` — the marketplace catalog. Its `plugins` array lists every skill-plugin and points `source` at each plugin directory. Adding a skill = adding one entry here.
+- `plugins/<skill>/.claude-plugin/plugin.json` — the plugin manifest for one skill (name, description, author, and — when published — `version`).
+- `plugins/<skill>/skills/<skill>/SKILL.md` — **the actual product.** Everything else is packaging around these files.
+- `evals/<skill>/evals.json` — that skill's regression suite: prompts plus objective assertions exercising it end-to-end. Lives at the repo root, outside the plugin source, so it never ships to users. When you change a `SKILL.md`, re-check its evals; when you add a behavior, add an eval.
 
-`evals/evals.json` holds eval prompts that exercise the skill end-to-end (e.g. hyphenated-name → underscore-package mapping, no-name placeholder flow). Treat these as the regression suite: when you change `SKILL.md` behavior, check the `expected_output` of each eval still holds, and add an eval when you add a behavior.
+Concretely, the `bootstrap-python-repo` skill lives at `plugins/bootstrap-python-repo/skills/bootstrap-python-repo/SKILL.md`, with evals at `evals/bootstrap-python-repo/evals.json`.
+
+## Adding a new skill
+
+Each skill is an independent plugin, so adding one is purely additive — it never touches existing skills:
+
+1. Create `plugins/<skill>/skills/<skill>/SKILL.md` (the skill itself).
+2. Create `plugins/<skill>/.claude-plugin/plugin.json` (`name`, `description`, `author`; omit `version` to keep commit-SHA auto-updates).
+3. Add an entry to the `plugins` array in `.claude-plugin/marketplace.json`: `name`, `source: "./plugins/<skill>"`, and `description`.
+4. Add `evals/<skill>/evals.json` as that skill's regression suite.
+5. Validate: `claude plugin validate ./plugins/<skill>` and `claude plugin validate .`.
+
+Users then install it with `/plugin install <skill>@jd-claude-skills`. Build the skill the rigorous way — brainstorm, draft, then eval — via the skill-creator workflow.
 
 ## The name/description appears in three places — keep them in sync
 
-The plugin name and one-line description are duplicated across `marketplace.json`, `plugin.json`, and the `SKILL.md` frontmatter. Change one, change all three.
+For each skill, the plugin name and one-line description are duplicated across that skill's entry in `marketplace.json`, its `plugin.json`, and its `SKILL.md` frontmatter. Change one, change all three (for that skill).
 
 The `description:` in `SKILL.md`'s YAML frontmatter is **not cosmetic** — it is the trigger phrase Claude matches against to decide whether to activate the skill. Editing it changes *when the skill fires*, so treat wording there as behavior, not documentation.
 
@@ -36,9 +49,9 @@ claude plugin validate ./plugins/bootstrap-python-repo --strict
 
 Note: `claude plugin validate` reports unrecognized/misspelled fields as warnings, not errors — read its output, don't just check the exit code.
 
-## Editing the skill
+## Editing the bootstrap-python-repo skill
 
-`SKILL.md` is the file you'll almost always be changing. Two things make it correct:
+This guidance is specific to the `bootstrap-python-repo` skill. Two things make its `SKILL.md` correct:
 
 - The bootstrap steps it describes must actually produce a working project. The authoritative check is that a scaffolded project passes `uv run ruff check .` and `uv run pytest` — this is asserted in every eval. If you change the generated `pyproject.toml`, `.gitignore`, or git hooks, mentally (or actually) run a scaffold through to confirm it still passes.
 - The skill embeds a *template* `CLAUDE.md` (for the projects it generates). Don't confuse it with this file: this CLAUDE.md governs *this* repo; the one inside `SKILL.md` is emitted into the user's new project. Conventions baked into that template (conventional commits, no AI attribution, type hints required, no `print()` in production) are deliberate — preserve them unless changing them on purpose.

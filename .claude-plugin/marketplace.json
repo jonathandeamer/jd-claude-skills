@@ -1,6 +1,6 @@
 {
-  "name": "bootstrap-python-repo",
-  "description": "Distributes the bootstrap-python-repo skill, which scaffolds new Python projects with uv, ruff, pytest, pyright, git hooks, CLAUDE.md, and a src layout.",
+  "name": "jd-claude-skills",
+  "description": "Jonathan Deamer's personal collection of Claude Code skills.",
   "owner": { "name": "Jonathan Deamer", "email": "jonathandeamer@gmail.com" },
   "plugins": [
     {
