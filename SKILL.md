@@ -21,30 +21,35 @@ Assumes the user has already created and `cd`'d into the project directory.
 
 Before generating files, ask:
 
-- **Project name** (default: current directory name)
+- **Project name** (default: current directory name). If the user doesn't have a name yet, don't block on it — proceed with a placeholder like `myproject`, mention you've done so, and point them at "Renaming the project later" below. A name is structurally required (it becomes the importable package and the distribution name), but it's cheap to change afterward with the steps provided.
 - **One-line project description** (used in CLAUDE.md and pyproject.toml)
-- **Python version** (default: `>=3.12`)
-- **License** (default: MIT)
+- **Minimum Python version** (default: `3.12`) — give a bare version like `3.12`. It becomes `requires-python = ">=<python-version>"`, the `pyright` `pythonVersion`, and the pinned `.python-version`.
 - **Whether they need a `.env.example`** and if so, what variables
+
+Don't add a license. Leave it out deliberately and tell the user it's a choice they should make later — the license governs how others may use the project, so it shouldn't be defaulted on their behalf. They can add a `LICENSE` file whenever they've decided — e.g. via GitHub's "Add license" UI, or by fetching the text for an SPDX id with `gh api /licenses/<spdx-id> --jq .body` (e.g. `mit`, `apache-2.0`).
 
 ### 2. Initialize git and uv
 
-The user is already inside the project directory. Initialize in place:
+The user is already inside the project directory. Initialize in place with a `src` layout:
 
 ```bash
 git init .
-uv init --app --no-readme
+uv init --lib --no-readme --name <project-name>
 ```
 
-Then delete the generated `hello.py` and replace `pyproject.toml` with the template in step 3:
+`uv init --lib` scaffolds the `src` layout for you: it creates `src/<package-name>/__init__.py`, `src/<package-name>/py.typed`, and `.python-version`. `uv` derives `<package-name>` from `<project-name>` by lowercasing and replacing hyphens with underscores (e.g. `my-cool-app` → `my_cool_app`), because hyphens are illegal in Python import names. Use this underscored `<package-name>` wherever the package directory is referenced below, and keep the original `<project-name>` only as the distribution name in `pyproject.toml`.
+
+`uv init` writes `.python-version` with the latest interpreter installed on your machine, which may be newer than the floor the user chose. Pin it to match so the dev interpreter and the declared floor agree:
 
 ```bash
-rm hello.py
+uv python pin <python-version>
 ```
+
+You'll overwrite the `pyproject.toml` and `.gitignore` that `uv` generated with the templates in step 3.
 
 ### 3. Create files
 
-Generate these files, substituting `<project-name>` and `<project-description>` throughout:
+Generate these files, substituting `<project-name>` (distribution name, e.g. `my-cool-app`), `<package-name>` (importable package, e.g. `my_cool_app`), `<project-description>`, and `<python-version>` (bare minimum version, e.g. `3.12`) throughout:
 
 #### `pyproject.toml`
 
@@ -53,15 +58,12 @@ Generate these files, substituting `<project-name>` and `<project-description>` 
 name = "<project-name>"
 version = "0.0.0"
 description = "<project-description>"
-requires-python = ">=3.12"
+requires-python = ">=<python-version>"
 dependencies = []
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/<project-name>"]
+requires = ["uv_build>=0.10,<0.12"]
+build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
@@ -83,7 +85,7 @@ markers = [
 ]
 
 [tool.pyright]
-pythonVersion = "3.12"
+pythonVersion = "<python-version>"
 typeCheckingMode = "standard"
 venvPath = "."
 venv = ".venv"
@@ -107,9 +109,6 @@ dist/
 build/
 *.egg-info/
 
-# uv
-.python-version
-
 # Tools
 .ruff_cache/
 .pytest_cache/
@@ -119,13 +118,13 @@ build/
 .env
 ```
 
-#### `src/<project-name>/__init__.py`
+#### `src/<package-name>/__init__.py` and `src/<package-name>/py.typed`
 
-Empty file.
+Already created by `uv init --lib` in step 2 — leave them in place. Note that `uv` seeds `__init__.py` with a sample `hello()` function; replace it with your real code (or empty the file) rather than shipping the placeholder. `py.typed` marks the package as typed so downstream consumers (and `pyright`) honor your annotations.
 
 #### `tests/__init__.py`
 
-Empty file.
+Empty file. (`uv init --lib` does not create a `tests/` directory, so create it yourself.)
 
 #### `.githooks/commit-msg`
 
@@ -199,8 +198,8 @@ echo "OK"
 
 ## Architecture
 
-- `src/<project-name>/` — production source code (src layout)
-- `tests/` — mirrors `src/<project-name>/` structure (e.g. `src/<project-name>/foo.py` → `tests/test_foo.py`)
+- `src/<package-name>/` — production source code (src layout)
+- `tests/` — mirrors `src/<package-name>/` structure (e.g. `src/<package-name>/foo.py` → `tests/test_foo.py`)
 - `.githooks/` — git hooks, installed with `git config core.hooksPath .githooks`
 
 ---
@@ -215,10 +214,17 @@ echo "OK"
 
 ---
 
+## Commits
+
+- **Conventional commits** are enforced by the `.githooks/commit-msg` hook: `<type>(<optional scope>): <description>` (types: feat, fix, docs, style, refactor, test, chore, perf, ci, build). Bypass only for WIP with `--no-verify`.
+- **No AI attribution.** Do not add `Co-Authored-By` trailers or any other AI/assistant attribution, and commit under the repository's own git identity — never an AI persona. Keep messages to a plain subject line (plus a body when it adds context).
+
+---
+
 ## Testing
 
 - **Runner:** `uv run pytest`
-- **Location:** `tests/` — mirrors the `src/<project-name>/` structure.
+- **Location:** `tests/` — mirrors the `src/<package-name>/` structure.
 - **Prefer unit tests.** Mock external API calls; don't make real HTTP requests in tests.
 - **Integration tests** (real API calls, real network) must be marked:
   ```python
@@ -251,8 +257,7 @@ echo "OK"
 
 ## Self-Update Note
 
-If you (Claude) introduce a new module, establish a new pattern, or make an architectural decision
-that isn't reflected here, flag it and suggest a CLAUDE.md update. This document should stay current.
+If you (Claude) add a module, establish a pattern, or make an architectural decision that isn't reflected here, suggest a CLAUDE.md update so this doc stays current.
 ```
 
 Adapt this template to the project: fill in the project name and description, and if the user mentioned specific architectural details or extra conventions during step 1, incorporate them. The template is a starting point, not a rigid form.
@@ -263,10 +268,6 @@ Adapt this template to the project: fill in the project name and description, an
 # <describe the variable>
 VARIABLE_NAME=your_value_here
 ```
-
-#### `LICENSE` (MIT, if selected)
-
-Standard MIT license text with the current year and user's name.
 
 ### 4. Make hooks executable and install
 
@@ -311,6 +312,18 @@ After setup, these commands are available:
 | Type check | `uv run pyright` |
 | Re-install hooks | `git config core.hooksPath .githooks` |
 
+## Renaming the project later
+
+If the project was started with a placeholder (or just needs a new name), the name is baked into a few predictable places. To rename from `<old-name>` to `<new-name>` — where `<old_package>`/`<new_package>` are the underscored, importable forms — work through these in order:
+
+1. Rename the package directory (preserves history): `git mv src/<old_package> src/<new_package>`
+2. Update `[project] name` in `pyproject.toml` to `<new-name>`. `uv_build` derives the package location from this name, so it must match the directory in step 1.
+3. Update any `import <old_package>` / `from <old_package>` references in `src/` and `tests/`.
+4. Update the project name and paths referenced in `CLAUDE.md`.
+5. (Optional) Rename the project directory itself.
+6. Re-sync so the editable install picks up the new name: `uv sync`
+7. Verify nothing broke: `uv run ruff check . && uv run pytest`
+
 ## Directory Structure
 
 ```
@@ -319,14 +332,15 @@ After setup, these commands are available:
     commit-msg
     pre-commit
   src/
-    <project-name>/
+    <package-name>/
       __init__.py
+      py.typed
   tests/
     __init__.py
   .env.example      # if requested
   .gitignore
+  .python-version
   CLAUDE.md
-  LICENSE
   pyproject.toml
   uv.lock
 ```
