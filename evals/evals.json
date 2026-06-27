@@ -1,0 +1,29 @@
+{
+  "skill_name": "bootstrap-python-repo",
+  "evals": [
+    {
+      "id": 0,
+      "name": "library-simple",
+      "prompt": "I'm starting a new Python library called text-stats — a small package for computing readability scores like Flesch-Kincaid. Set up the repo skeleton for me. Python 3.12+ is fine, no env file needed.",
+      "expected_output": "A scaffolded project in a `text-stats/` directory with src layout (src/text_stats/ with __init__.py and py.typed), pyproject.toml using uv_build with ruff/pytest/pyright dev deps, tests/__init__.py, executable git hooks installed via core.hooksPath, .gitignore that does NOT ignore .python-version, CLAUDE.md, NO LICENSE file, and a clean initial conventional commit. `uv run ruff check .` and `uv run pytest` succeed.",
+      "files": [],
+      "assertions": []
+    },
+    {
+      "id": 1,
+      "name": "cli-with-env",
+      "prompt": "Bootstrap a new Python project called weather-cli — a command-line tool that fetches forecasts from the OpenWeather API. I'll need to store an API key (OPENWEATHER_API_KEY) in the environment. Use Python 3.12 or newer.",
+      "expected_output": "A scaffolded project in `weather-cli/` with the hyphenated name correctly mapped to an importable package src/weather_cli/ (underscores). Includes a .env.example containing OPENWEATHER_API_KEY, with .env gitignored. Same tooling as eval 0 (uv_build, ruff/pytest/pyright, hooks, CLAUDE.md, no LICENSE). `uv run ruff check .` and `uv run pytest` succeed; the package imports.",
+      "files": [],
+      "assertions": []
+    },
+    {
+      "id": 2,
+      "name": "no-name-placeholder",
+      "prompt": "I want to start messing around with a Python project but I haven't settled on a name yet. Can you just set me up with the standard skeleton so I can start coding?",
+      "expected_output": "The skill does NOT block on the missing name — it proceeds with a placeholder (e.g. `myproject`), says it did so, and tells the user how to rename later. Produces a working project: src/<placeholder>/ with __init__.py and py.typed, full tooling (uv_build, ruff/pytest/pyright), hooks installed, CLAUDE.md, no LICENSE, clean initial commit. Tooling commands pass.",
+      "files": [],
+      "assertions": []
+    }
+  ]
+}
