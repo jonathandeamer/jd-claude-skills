@@ -1,0 +1,5 @@
+{
+  "name": "bootstrap-python-repo",
+  "description": "Bootstrap a new Python project with uv, ruff, pytest, pyright, git hooks, CLAUDE.md, and src layout.",
+  "author": { "name": "Jonathan Deamer" }
+}

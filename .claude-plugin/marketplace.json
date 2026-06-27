@@ -1,0 +1,11 @@
+{
+  "name": "bootstrap-python-repo",
+  "owner": { "name": "Jonathan Deamer", "email": "jonathandeamer@gmail.com" },
+  "plugins": [
+    {
+      "name": "bootstrap-python-repo",
+      "source": "./plugins/bootstrap-python-repo",
+      "description": "Bootstrap a new Python project with uv, ruff, pytest, pyright, git hooks, CLAUDE.md, and src layout."
+    }
+  ]
+}
